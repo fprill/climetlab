@@ -17,6 +17,7 @@ from functools import cached_property
 from itertools import islice
 
 import eccodes
+import gribapi.errors
 
 from climetlab.core import Base
 from climetlab.core.constants import DATETIME
@@ -677,9 +678,17 @@ class GribField(Base):
             warnings.warn(f"ecCodes does not support rotated iterator for {self.grid_type}")
             return self.grid_points_unrotated()
 
-        data = self.data
-        lat = np.array([d["lat"] for d in data])
-        lon = np.array([d["lon"] for d in data])
+        #FIXME: hack to read ICON data lat lons 
+        try:
+            data = self.data
+            lat = np.array([d["lat"] for d in data])
+            lon = np.array([d["lon"] for d in data])
+        except gribapi.errors.FunctionNotImplementedError:
+            import netCDF4
+            nc = netCDF4.Dataset("/hpc/uwork/tgoecke/Projects/AICON/aicon-graph/swift.dkrz.de/cicd_data_aicon_graph/icon_grid_0026_R03B07_G.nc")
+            mrl = nc.variables["refinement_level_c"][:]
+            lat = np.rad2deg(nc.variables["clat"][:])[mrl <= 3]
+            lon = np.rad2deg(nc.variables["clon"][:])[mrl <= 3]
 
         lon[lon >= 360] -= 360
 
