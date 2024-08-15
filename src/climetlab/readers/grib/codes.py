@@ -685,10 +685,13 @@ class GribField(Base):
             lon = np.array([d["lon"] for d in data])
         except gribapi.errors.FunctionNotImplementedError:
             import netCDF4
+            numberOfGridUsed = eccodes.codes_get_long(self.handle.handle, "numberOfGridUsed")
+            assert numberOfGridUsed // 10 == 26, "Only original grid 26 is implemented in CliMetLab"
             nc = netCDF4.Dataset("/hpc/uwork/tgoecke/Projects/AICON/aicon-graph/swift.dkrz.de/cicd_data_aicon_graph/icon_grid_0026_R03B07_G.nc")
-            mrl = nc.variables["refinement_level_c"][:]
-            lat = np.rad2deg(nc.variables["clat"][:])[mrl <= 3]
-            lon = np.rad2deg(nc.variables["clon"][:])[mrl <= 3]
+            refinement_level_c = nc.variables["refinement_level_c"][:]
+            max_refinement_level_c = numberOfGridUsed % 10
+            lat = np.rad2deg(nc.variables["clat"][:])[refinement_level_c <= max_refinement_level_c]
+            lon = np.rad2deg(nc.variables["clon"][:])[refinement_level_c <= max_refinement_level_c]
 
         lon[lon >= 360] -= 360
 
